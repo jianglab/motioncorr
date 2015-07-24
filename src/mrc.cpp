@@ -13,6 +13,9 @@ MRC::MRC()
 	m_header.mapr=2;
 	m_header.maps=3;
 	m_fp=NULL;
+#ifdef EMAN2
+	m_filename[0]=0;
+#endif
 }
 
 MRC::MRC(const char *filename, const char *mode)
@@ -28,6 +31,20 @@ MRC::~MRC()
 
 int MRC::open(const char *filename, const char *mode)
 {
+#ifdef EMAN2
+	strcpy(m_filename, filename);
+	if(mode[0]=='r') {
+		imageHeader.read_image(filename, 0, 1);	// read header only
+		m_header.nx = imageHeader.get_xsize();
+		m_header.ny = imageHeader.get_ysize();
+		m_header.nz = EMUtil::get_image_count(filename);
+		m_header.mode = 2;	// float
+	}
+	else {
+		close();
+		m_fp=fopen(filename,mode);
+	}
+#else
 	close();
 	m_fp=fopen(filename,mode);
 	if(m_fp==NULL) return 0;
@@ -35,19 +52,25 @@ int MRC::open(const char *filename, const char *mode)
 	//read file header
 	rewind(m_fp);
 	if(fread(&m_header,1,1024,m_fp)<1024) return -1;
-	
+#endif
 	return 1;
 }
 
 void MRC::close()
 {
+#ifdef EMAN2
+#else
 	if(m_fp!=NULL) fclose(m_fp);
 	m_fp=NULL;
+#endif
 }
 
 void MRC::printInfo()
 {
-	if(m_fp==NULL) 
+#ifdef EMAN2
+	imageHeader.debug_print_parms();
+#else
+	if(m_fp==NULL)
 	{
 		printf("No MRC file was opened!");
 		return;
@@ -74,6 +97,7 @@ void MRC::printInfo()
 	{
 		printf("\t\t%s\n",m_header.label[i]);
 	}
+#endif
 }
 
 void MRC::getHeader(const MRCHeader *pheader)
@@ -98,6 +122,9 @@ int MRC::getNz()
 
 int MRC::getWordLength()
 {
+#ifdef EMAN2
+	return sizeof(float);
+#else
 	switch(m_header.mode)
 	{
 		case 0:
@@ -117,6 +144,7 @@ int MRC::getWordLength()
 	}
 	
 	return 0;
+#endif
 }
 
 int MRC::getImSize()
@@ -149,7 +177,6 @@ float MRC::getMean()
 	return m_header.dmean;
 }
 
-	
 int MRC::read2DIm(void *buf, int n)
 {
         size_t ImSize=getImSize();
@@ -320,12 +347,22 @@ char * MRC::getLabel(int line)
 
 bool MRC::hasFile()
 {
+#ifdef EMAN2
+	return ( access( m_filename, F_OK ) != -1 );
+#else
 	if(m_fp==NULL) return false;
 	else return true;
+#endif
 }
 
 int MRC::read2DIm_32bit(float *buf, int n)
 {
+#ifdef EMAN2
+	imageHeader.read_image(m_filename, n);
+	size_t nbytes = sizeof(float)*imageHeader.get_size();
+	memcpy(buf, imageHeader.get_const_data(), nbytes);
+	return nbytes;
+#else
 	int mode = m_header.mode;
 	size_t size=m_header.nx*m_header.ny;
 	if(size<=0) return 0;
@@ -390,9 +427,8 @@ int MRC::read2DIm_32bit(float *buf, int n)
 			return r;
 
 	}
-	
 	return 0;
-
+#endif
 }
 
 

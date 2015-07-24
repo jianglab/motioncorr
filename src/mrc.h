@@ -1,6 +1,11 @@
 #pragma once
 #include "stdio.h"
 
+#ifdef EMAN2
+	#include "emdata.h"
+	using namespace EMAN;
+#endif
+
 struct MRCHeader
 {	
 	int nx;	//number of columns (fastest changing in map)
@@ -95,9 +100,11 @@ public:
 	MRCHeader m_header;
 	
 private:
-	
 	FILE *m_fp;
-
+#ifdef EMAN2
+	char m_filename[256];
+	EMData imageHeader;
+#endif
 };
 
 
