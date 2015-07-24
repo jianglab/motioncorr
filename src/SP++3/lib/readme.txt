@@ -1,0 +1,1 @@
+Here are FFTW lib and dll files compiled by GCC4.5 and VC2010 in Win7. But I suggest you compiling it by youself in you computer, or there will be some unpredictable errors!
