@@ -1,3 +1,12 @@
+This Git repositiory of MotioCorr is based on the MotionCorr 2.0 release with the following extensions:
+        1. Read any image format (DM4, mrcs, and essentially all formats used in cryo-EM fields by using EMAN2 IO functions)
+        2. Automatically convert to native endian of current computer regardless of starting endianness (i.e. big-endian used by DM4 images to little-endian used by Intel CPUs)
+        3. Compile on all major computer systems (Linux, Mac, and Windows) using the cross-platform CMake build system
+
+**********************************************************************
+The contents below are original contents included in MotionCorr 2.0
+**********************************************************************
+
 Motion Correction for Dose-Fractionation Stack
 Version 1.0, April 11, 2013
 
