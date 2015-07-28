@@ -33,8 +33,8 @@ SET(FFTW_LIBRARIES ${FFTW_LIBRARY})
 SET(FFTW_INCLUDE_PATH ${FFTW_INCLUDE_PATH})
 
 include_directories(
-    src
-    src/SP++3/include
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/SP++3/include
     ${FFTW_INCLUDE_PATH}
 )
 
@@ -56,11 +56,11 @@ cuda_add_executable(
 
 target_link_libraries(
     dosefgpu_driftcorr
-    ${FFTW_LIBRARIES}
     m
     pthread
-    cuda
-    cufft
+	${FFTW_LIBRARIES}
+    ${CUDA_CUDA_LIBRARY}
+    ${CUDA_CUFFT_LIBRARIES}
 )
 
 OPTION(ENABLE_EMAN2 "enable EMAN2 support" OFF)
