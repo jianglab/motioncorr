@@ -35,9 +35,21 @@ int MRC::open(const char *filename, const char *mode)
 	strcpy(m_filename, filename);
 	if(mode[0]=='r') {
 		imageHeader.read_image(filename, 0, 1);	// read header only
+		int nz = imageHeader.get_zsize();
+		int nImage = EMUtil::get_image_count(filename);
+		imageHeader.set_attr("nImage", nImage);
+		if (nz==1 && nImage>1) {	// 2D mrcs file: nz=1, nImage>1
+			m_header.nz = nImage;
+		}
+		else if(nz>1 && nImage==1) {	// 3D mrc file: nz>1, nImage=1
+			m_header.nz = nz;
+		}
+		else {
+			fprintf(stderr, "ERROR: image %s seems to have unsupported combination of size (%dx%dx%d) and number of images (%d)", imageHeader.get_xsize(), imageHeader.get_ysize(), imageHeader.get_zsize(), nImage);
+			exit(1);
+		}
 		m_header.nx = imageHeader.get_xsize();
 		m_header.ny = imageHeader.get_ysize();
-		m_header.nz = EMUtil::get_image_count(filename);
 		m_header.mode = 2;	// float
 	}
 	else {
@@ -358,7 +370,12 @@ bool MRC::hasFile()
 int MRC::read2DIm_32bit(float *buf, int n)
 {
 #ifdef EMAN2
-	imageHeader.read_image(m_filename, n);
+	if(int(imageHeader.get_attr("nImage"))>1)
+		imageHeader.read_image(m_filename, n);
+	else {	// read a section in 3D map
+		Region r(0, 0, n, imageHeader.get_xsize(), imageHeader.get_ysize(), 1);
+		imageHeader.read_image(m_filename, 0, 0, &r);
+	}
 	size_t nbytes = sizeof(float)*imageHeader.get_size();
 	memcpy(buf, imageHeader.get_const_data(), nbytes);
 	return nbytes;
