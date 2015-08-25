@@ -21,6 +21,7 @@ APARA getDefaultPara()
 
 	p.GPUNum=0;  // GPU device ID 
 
+	p.nrw=1;  // number of frames used to generate running averages for cross correlation
 	p.bfactor=150;  // in pix^2
 	p.CCPeakSearchDim=96;//search peak in this box
 	p.FrameDistOffset=2;
@@ -204,6 +205,14 @@ bool getPara(int narg, char* argc[], CDFAlign &align)
 			continue;
 		}
 		
+		if(option.compare("-nrw")==0)
+		{
+			i++;
+			p.nrw=atoi(argc[i]);
+			p.nrw = p.nrw/2*2+1;	// force to odd number
+			continue;
+		}
+
 		if(option.compare("-bft")==0)
 		{
 			i++;
@@ -464,6 +473,7 @@ void ShowPara(CDFAlign &align)
 	fprintf(fp,"  -nss  %d\n",p.nStartSum);
 	fprintf(fp,"  -nes  %d\n",p.nEndSum);
 	fprintf(fp,"  -gpu  %d\n",p.GPUNum);
+	fprintf(fp,"  -nrw  %d\n",p.nrw);
 	fprintf(fp,"  -bft  %f\n",p.bfactor);
 	fprintf(fp,"  -pbx  %d\n",p.CCPeakSearchDim);
 	fprintf(fp,"  -fod  %d\n",p.FrameDistOffset);
@@ -522,6 +532,7 @@ int main(int narg, char* argc[])
 		printf("           -nss       0                 First frame (0-base) used for final sum.\n");
 		printf("           -nes       0                 Last frame (0-base) used for final sum. 0: Use maximum value.\n");
 		printf("           -gpu       0                 GPU device ID.\n");
+		printf("           -nrw       1                 Number (1, 3, 5, ...) of frames in running window.\n");
 		printf("           -bft       150               BFactor in pix^2.\n");
 		printf("           -pbx       96                Box dimension for searching CC peak.\n");
 		printf("           -fod       2                 Number of frame offset for frame comparision.\n");

@@ -549,7 +549,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 	GPUMemZero((void **)&dsumcorr,sizeof(float)*sizeb);
 	GPUSync();
 	ifft_plan=GPUIFFTPlan(nsam);
-	GPUSync();
+	GPUSync();
 	//copy sum image to host for save and display
 	if(para.bDispFFTRaw || para.bSaveRawSum)
 	{
@@ -613,7 +613,31 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 		sprintf(str,"Save Uncorrected Stack to: %s\n",pThis->m_fnStackRaw);
 		pThis->TextOutput(str);
 	}
-	
+
+	// added by Wen Jiang
+	// generate running average frames for CC
+	float *hbuf_orig=hbuf;
+	float *hbuf_ra=0;
+	if(para.nrw>1) {
+		sprintf(str,"\nStart generating running average of %d frames\n",para.nrw);
+		pThis->TextOutput(str);
+
+		hbuf_ra = new float[sizeb*nframe];  //host memory for entire stack
+		memcpy(hbuf_ra, hbuf, sizeof(float)*sizeb*nframe);	// hbuf stores FFT of all frames
+		for(int fi = 0; fi<nframe; fi++) {
+			sprintf(str,"......Generating runing average of frame %d\n",fi);
+			pThis->TextOutput(str);
+			for(int ri=0; ri<para.nrw; ri++) {
+				int fi2 = fi - para.nrw/2 + ri;
+				if(fi2<0 || fi2==fi || fi2>=nframe) continue;
+				for(size_t pi=0; pi<sizeb; pi++)
+					hbuf_ra[sizeb*fi+pi]+=hbuf[sizeb*fi2+pi];
+			}
+		}
+		hbuf = hbuf_ra;
+		sprintf(str,"Running average of %d frames are generated\n\n",para.nrw);
+		pThis->TextOutput(str);
+	}
 
 	//2. frame to frame shift
 	pThis->TextOutput("\nCalculate relative drift between frames\n");
@@ -646,6 +670,11 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 		sprintf(str,"......%03d Frame #%03d VS #%03d xy-shift: %8.4f %8.4f      CC:%f\n",j,par0+para.nStart,par1+para.nStart,shiftx,shifty,cc);
 		pThis->TextOutput(str);
 	}
+
+	// added by Wen Jiang
+	// restore original stack buffer and delete running averages
+	hbuf=hbuf_orig;
+	if(hbuf_ra) delete[] hbuf_ra;
 
 	//3. sovle overdetermined equation
 	Vector<complex<double> > shift=lsSolver(A,b);
