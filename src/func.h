@@ -62,3 +62,4 @@ void DispFFTToDispShort(short *pDisp, float *pfft, int dispdim);
 float* ReadRef(const char *filename, int dst_nx, int dst_ny);
 bool ApplyRef(float* im, bool bDark, float* dark, bool bGain, float* gain, size_t size);
 
+void FlipYAxis(float *buf, int nx, int ny);

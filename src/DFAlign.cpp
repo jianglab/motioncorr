@@ -492,8 +492,11 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 			sprintf(str,"Error when reading #%03d\n",j);
 			pThis->TextOutput(str);
 		}
-		
-		
+
+		if(para.flp) {	//flip image along y axis
+			FlipYAxis(bufmrc, nx, ny);
+		}
+
 		//apply gain and dark reference
 		if(!ApplyRef(bufmrc, para.bDark, pThis->m_pDark, para.bGain, pThis->m_pGain, nx*ny))
 		{

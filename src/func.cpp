@@ -554,7 +554,16 @@ bool ApplyRef(float* im, bool bDark, float* dark, bool bGain, float* gain, size_
 	return true;
 }
 
-
-
-
+void FlipYAxis(float *buf, int nx, int ny)
+{
+	float *tmp = new float[nx];
+	for(int j=0; j<ny; j++) {
+		int j2 = ny-1-j;
+		if(j>=j2) break;
+		memcpy(tmp, buf+j*nx, sizeof(float)*nx);
+		memcpy(buf+j*nx, buf+j2*nx, sizeof(float)*nx);
+		memcpy(buf+j2*nx, tmp, sizeof(float)*nx);
+	}
+	delete[] tmp;
+}
 

@@ -27,6 +27,7 @@ struct APARA
 
 	int GPUNum;  // GPU device ID 
 
+	int flp;	// flip along y direction
 	int nrw;
 	float bfactor;  // in pix^2
 	int CCPeakSearchDim;//search peak in this box
