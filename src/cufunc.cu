@@ -156,7 +156,7 @@ bool GPUCrop2d(float *src, DIM nsamin, float *dst, DIM offset, DIM nsamout)
 	int i;
 	for(i=0;i<nsamout.height();i++)
 	{
-		GPUMemD2D(dst+i*nsamoutb, src+(i+offset.y)*nsaminb+offset.x, 
+		GPUMemD2D(dst+i*nsamoutb, src+(i+offset.y)*nsaminb+offset.x,
 				sizeof(float)*nsamout.width());
 	}
 
@@ -237,17 +237,17 @@ DIM GPURectFFTLogModulus(float *dfft, float *dsum, float *dtmp1, float *dtmp2, D
 		GPUCrop2d(dsum, nsam, dtmp1, offset, nsamsub);
 		GPUFFT2d(dtmp1, hfft);
 		GPUFFTLogModulus(dtmp2, dtmp1, nsamsub, scale);
-	
+
 		//add
 		GPUAdd(dfft, dtmp2, sizeof(float)*(nsamsub.width()/2+1)*nsamsub.height());
 		GPUSync();
-		
+
 		offset.x-=nsamsub.x;
 		offset.y-=nsamsub.y;
 		if(offset.x<0) offset.x=0;
 		if(offset.y<0) offset.y=0;
 	}
-	
+
 	//make pwr
 	/*float *buf1=new float[(nsamsub.width()/2+1)*nsamsub.height()];
 	float *buf2=new float[(nsamsub.width()+2)*nsamsub.height()];
@@ -280,15 +280,15 @@ void GPUBinFFT(float *dst, int dispdim, float *src, DIM nsamsub, cufftHandle hff
 void GPUFFTErrorMessage(cufftResult r, char *name)
 {
 	char err[10][32]=
-	  { "Success 0",  
- 		 "InvalidPlan 1",  
- 		 "AllocFailed 2",  
- 		 "InvalidType 3",  
- 		 "InvalidValue 4",  
- 		 "InternalError 5",  
- 		 "ExecFailed 6",  
- 		 "SetupFailed 7",  
-  		 "InvalidSize 8",  
+	  { "Success 0",
+ 		 "InvalidPlan 1",
+ 		 "AllocFailed 2",
+ 		 "InvalidType 3",
+ 		 "InvalidValue 4",
+ 		 "InternalError 5",
+ 		 "ExecFailed 6",
+ 		 "SetupFailed 7",
+  		 "InvalidSize 8",
  		 "UnalignedData 9"};
  	if(r!=0)	printf("\n\nError: cuFFT error: %s  in function: %s\n\n",err[r],name);
 }
@@ -611,9 +611,9 @@ void GPUbuf2mrc(const char *filename, float* dbuf, int nx, int ny, int nz)
 	mrc.open(filename,"wb");
 	mrc.createMRC(buf,nx,ny,nz);
 	mrc.close();
-	
+
 	delete [] buf;
-	
+
 	printf("**********buf was written to %s\n", filename);
 }
 
