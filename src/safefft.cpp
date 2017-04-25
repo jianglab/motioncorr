@@ -1,7 +1,6 @@
 #include "safefft.h"
 #include "fftw3.h"
 #include <pthread.h>
-#pragma comment(lib,"libfftw3f-3.lib")
 
 pthread_mutex_t mutex_fftwplan;
 
