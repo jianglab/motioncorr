@@ -91,7 +91,7 @@ void MRC::printInfo()
 		return;
 	}
 
-	printf("\tMRC Header size:                   %12d\n",sizeof(MRCHeader));
+	printf("\tMRC Header size:                   %12lu\n",sizeof(MRCHeader));
 	printf("\tNum of columns, rows,sections:     %12d %12d %12d\n",m_header.nx,m_header.ny,m_header.nz);
 	printf("\tMode:                              %12d\n",m_header.mode);
 	printf("\tNum of First column, row, section: %12d %12d %12d\n",m_header.nxstart, m_header.nystart, m_header.nzstart);
