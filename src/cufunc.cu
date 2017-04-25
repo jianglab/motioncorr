@@ -277,7 +277,7 @@ void GPUBinFFT(float *dst, int dispdim, float *src, DIM nsamsub, cufftHandle hff
 	//need ifft to final, was done in output function
 }
 
-void GPUFFTErrorMessage(cufftResult r, char *name)
+void GPUFFTErrorMessage(cufftResult r, const char *name)
 {
 	char err[10][32]=
 	  { "Success 0",
