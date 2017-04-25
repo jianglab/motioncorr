@@ -237,7 +237,6 @@ int MRC::readGainInHeader(float* buf)
 	size_t SymDataSize=getSymdatasize();
 	size_t GainSize=m_header.nx*m_header.ny*sizeof(float);
 	size_t offset=SymDataSize-GainSize; //the SymDatam may contain other data in the beginning
-	if(offset<0) return 0;
 
 	if(fseek(m_fp, 1024+offset, SEEK_SET)!=0) return 0;
 	return fread(buf, 1, GainSize, m_fp);
