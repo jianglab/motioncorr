@@ -3,7 +3,6 @@
 #include <pthread.h>
 #include "safefft.h"
 
-#pragma comment(lib,"libfftw3f-3.lib")
 fftwf_plan plan_fft_fast;
 fftwf_plan plan_ifft_fast;
 
