@@ -12,9 +12,9 @@ MACRO(CHECK_REQUIRED_LIB2 upper lower header lower2 header2)
     ELSE (${upper}_INCLUDE_PATH)
 		FIND_PATH(${upper}_INCLUDE_PATH ${header2} $ENV{${upper}DIR}/include ${INCLUDE_DIRS})
     ENDIF(${upper}_INCLUDE_PATH)
-    
+
     IF(${upper}_INCLUDE_PATH)
-		FIND_LIBRARY(${upper}_LIBRARY NAMES ${lower} ${lower2} PATHS $ENV{${upper}DIR}/lib ${LIB_DIRS})		
+		FIND_LIBRARY(${upper}_LIBRARY NAMES ${lower} ${lower2} PATHS $ENV{${upper}DIR}/lib ${LIB_DIRS})
 		IF(${upper}_LIBRARY)
 		ELSE(${upper}_LIBRARY)
 			MESSAGE(SEND_ERROR "ERROR: ${upper} not found. please install ${upper} first!")
@@ -71,7 +71,7 @@ IF(ENABLE_EMAN2)
     INCLUDE_DIRECTORIES(${EMAN2_INCLUDE_PATH})
 	target_link_libraries(
 		dosefgpu_driftcorr
-		${EMAN_LIBRARIES}	
+		${EMAN_LIBRARIES}
 )
 ENDIF(ENABLE_EMAN2)
 
