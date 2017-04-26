@@ -1,4 +1,3 @@
-
 CPPFLAGS = -static -I./SP++3/include
 CXXFLAGS = -O3
 CUFLAGS = -O3 -lcuda -lcufft -arch=sm_20  -Xptxas -dlcm=ca  -lpthread -I./SP++3/include
