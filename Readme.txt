@@ -1,4 +1,4 @@
-This Git repositiory of MotioCorr is based on the MotionCorr 2.0 release with the following extensions:
+This Git repository of MotionCorr is based on the MotionCorr 2.0 release with the following extensions:
 	1. Add a new option -nrw to use running average of neighor frames for correlation analysis to detect relative shifts among frame pairs. It can make the final motion trajectory smoother and presumably more reliable
 	2. Add a new option -flp to flip the frames along Y-axis (i.e. vertical direction) before correlation analysis
 	3. Read any image format (DM4, mrcs, and essentially all formats used in cryo-EM fields by using EMAN2 IO functions)
