@@ -10,5 +10,6 @@ DoseFProject: func.o mrc.o dim.o safefft.o
 	${NVCC} ${CUFLAGS} -c DFAlign.cpp -o DFAlign.o
 	${NVCC} ${CUFLAGS} ${CULIBFLAGS} dosefgpu_driftcorr.cpp -o ../bin/dosefgpu_driftcorr
 	${NVCC} -O3 gpuinfo.cu -o ../bin/gpuinfo
+
 clean:
 	rm -rf *.o
