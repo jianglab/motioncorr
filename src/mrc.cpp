@@ -63,7 +63,7 @@ int MRC::open(const char *filename, const char *mode)
 	close();
 	m_fp=fopen(filename,mode);
 	if(m_fp==NULL) return 0;
-	
+
 	//read file header
 	rewind(m_fp);
 	if(fread(&m_header,1,1024,m_fp)<1024) return -1;
@@ -90,7 +90,7 @@ void MRC::printInfo()
 		printf("No MRC file was opened!");
 		return;
 	}
-	
+
 	printf("\tMRC Header size:                   %12d\n",sizeof(MRCHeader));
 	printf("\tNum of columns, rows,sections:     %12d %12d %12d\n",m_header.nx,m_header.ny,m_header.nz);
 	printf("\tMode:                              %12d\n",m_header.mode);
@@ -157,7 +157,7 @@ int MRC::getWordLength()
 		case 6:
 			return 2;
 	}
-	
+
 	return 0;
 #endif
 }
@@ -229,6 +229,22 @@ int MRC::readnPixels(void *buf, int nimage, int nline, int npixel, int n)
         return fread(buf, 1, n*getWordLength(), m_fp);
 }
 
+
+int MRC::readGainInHeader(float* buf)
+{
+	if(buf==NULL) return 0;
+
+	size_t SymDataSize=getSymdatasize();
+	size_t GainSize=m_header.nx*m_header.ny*sizeof(float);
+	size_t offset=SymDataSize-GainSize; //the SymDatam may contain other data in the beginning
+	if(offset<0) return 0;
+
+	if(fseek(m_fp, 1024+offset, SEEK_SET)!=0) return 0;
+	return fread(buf, 1, GainSize, m_fp);
+
+}
+
+
 int MRC::write2DIm(void *buf, int n)
 {
         size_t ImSize=(size_t)getImSize();
@@ -254,6 +270,15 @@ int MRC::writePixel(void *buf, int nimage, int nline, int npixel)
 	size_t offset=1024+getSymdatasize()+nimage*ImSize+nline*LineLength+npixel*getWordLength();
 	if(fseek(m_fp, offset, SEEK_SET)!=0) return 0;
 	return fwrite(buf, 1, getWordLength(), m_fp);
+}
+
+int MRC::writeSymData(void* buf)
+{
+	if(buf==NULL) return 0;
+	size_t ImSize=(size_t)getSymdatasize();
+   size_t offset=1024;
+	if(fseek(m_fp, offset, SEEK_SET)!=0) return 0;
+	return fwrite(buf, 1, ImSize, m_fp);
 }
 
 void MRC::setHeader(const MRCHeader *pheader)
@@ -310,7 +335,7 @@ int MRC::createMRC(float *data, int nx, int ny, int nz)
 	m_header.dmax=max;
 	m_header.dmean=mean;
 	updateHeader();
-	
+
 	size_t ImSize=size*sizeof(float);
 	size_t offset=1024+getSymdatasize();
 	if(fseek(m_fp, offset, SEEK_SET)!=0) return 0;
@@ -343,7 +368,7 @@ int MRC::createMRC(short *data, int nx, int ny, int nz)
 	m_header.dmax=max;
 	m_header.dmean=mean;
 	updateHeader();
-	
+
 	size_t ImSize=size*sizeof(short);
 	size_t offset=1024+getSymdatasize();
 	if(fseek(m_fp, offset, SEEK_SET)!=0) return 0;
@@ -380,7 +405,7 @@ int MRC::read2DIm_32bit(float *buf, int n)
 	else {
 		imageHeader.read_image(m_filename, n);
 	}
-	
+
 	size_t nbytes = sizeof(float)*imageHeader.get_size();
 	memcpy(buf, imageHeader.get_const_data(), nbytes);
 	return nbytes;
@@ -388,19 +413,19 @@ int MRC::read2DIm_32bit(float *buf, int n)
 	int mode = m_header.mode;
 	size_t size=m_header.nx*m_header.ny;
 	if(size<=0) return 0;
-	
+
 	char *buf8=NULL;
 	unsigned char *bufu8=NULL;
 	short *buf16=NULL;
 	unsigned short *bufu16=NULL;
 	size_t r,i;
-	
+
 	switch(mode)
 	{
 		case 0:
 			buf8=new char[size];
 			r=read2DIm((void*)buf8,n);
-			if(r<=0) 
+			if(r<=0)
 			{
 				delete [] buf8;
 				return 0;
@@ -408,11 +433,11 @@ int MRC::read2DIm_32bit(float *buf, int n)
 			for(i=0;i<size;i++) buf[i]=float(buf8[i]);
 			delete [] buf8;
 			return r;
-	
+
 		case 1:
 			buf16=new short[size];
 			r=read2DIm((void*)buf16,n);
-			if(r<=0) 
+			if(r<=0)
 			{
 				delete [] buf16;
 				return 0;
@@ -423,11 +448,11 @@ int MRC::read2DIm_32bit(float *buf, int n)
 
 		case 2:
 			return read2DIm((void*)buf,n);
-			
+
 		case 5:
 			bufu8=new unsigned char[size];
 			r=read2DIm((void*)bufu8,n);
-			if(r<=0) 
+			if(r<=0)
 			{
 				delete [] bufu8;
 				return 0;
@@ -435,11 +460,11 @@ int MRC::read2DIm_32bit(float *buf, int n)
 			for(i=0;i<size;i++) buf[i]=float(bufu8[i]);
 			delete [] bufu8;
 			return r;
-			
+
 		case 6:
 			bufu16=new unsigned short[size];
 			r=read2DIm((void*)bufu16,n);
-			if(r<=0) 
+			if(r<=0)
 			{
 				delete [] bufu16;
 				return 0;
@@ -452,16 +477,3 @@ int MRC::read2DIm_32bit(float *buf, int n)
 	return 0;
 #endif
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

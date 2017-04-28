@@ -4,7 +4,7 @@
 #include "mrc.h"
 #include "cufunc.h"
 #include <string>
-#include <pthread.h> 
+#include <pthread.h>
 #include "dim.h"
 using namespace std;
 
@@ -14,9 +14,9 @@ using namespace std;
 
 struct APARA
 {
-	int crop_offsetx;  
-	int crop_offsety;  
-	DIM crop_nsam;   
+	int crop_offsetx;
+	int crop_offsety;
+	DIM crop_nsam;
 
 	int bin;
 
@@ -25,7 +25,7 @@ struct APARA
 	int nStartSum;  //first frame to sum(0-base)
 	int nEndSum;    //last frame to sum(0-base)
 
-	int GPUNum;  // GPU device ID 
+	int GPUNum;  // GPU device ID
 
 	int flp;	// flip along y direction
 	int nrw;
@@ -34,6 +34,7 @@ struct APARA
 	int FrameDistOffset;
 	int NoisePeakSize;
 	float kiThresh;
+	bool bHGain;  //gain reference in header(MRC mode 5 only)
 	bool bDark;
 	bool bGain;
 
@@ -45,7 +46,7 @@ struct APARA
 
 	int bAlignToMid;
 
-	
+
 
 	//diplay para
 	float fftscale;
@@ -76,7 +77,7 @@ public:
 	char m_fnDark[512];
 	float *m_pGain;
 	float *m_pDark;
-	
+
 	//output filename
 	char m_fnRawsum[512];
 	char m_fnAlignsum[512];
@@ -84,26 +85,26 @@ public:
 	char m_fnStackCorr[512];
 	char m_fnCCmap[512];
 	char m_fnLog[512];
-	
-	
+
+
 	//quick display filename
 	bool m_bSaveDisp;
 	char m_dispRawFFT[512];
 	char m_dispCorrSum[512];
 	char m_dispCorrFFT[512];
-	
-	
+
+
 	APARA m_para;
 
 	string m_log;
 	DIM m_nsam;
 	//DIM m_nsamRaw;
-	
+
 	vector<pthread_t> m_tids;
 
 public:
 	static void Message(const char *str);
-	
+
 	void UpdateDisplay();
 	void TextOutput(const char *str);
 
@@ -151,4 +152,3 @@ public:
 	int getNFrame(const char *filename);
 	MRCHeader getMrcHeader(const char *filename);
 };
-

@@ -23,10 +23,10 @@ CDFAlign::CDFAlign(void)
 	m_dispFFTRaw=new short[DISPDIM*DISPDIM];
 
 	m_bufCCMap=0;
-	
+
 	m_pGain=0;
 	m_pDark=0;
-	
+
 	strcpy(m_fnGain, "none");
 	strcpy(m_fnDark, "none");
 
@@ -47,7 +47,7 @@ CDFAlign::~CDFAlign(void)
 	if(m_dispFFTRaw!=0) delete [] m_dispFFTRaw;
 
 	if(m_bufCCMap!=0) delete [] m_bufCCMap;
-	
+
 	if(m_pGain!=0) delete [] m_pGain;
 	if(m_pDark!=0) delete [] m_pDark;
 
@@ -68,7 +68,7 @@ void CDFAlign::TextOutput(const char *str)
 	m_log=str;
 	printf("%s",m_log.c_str());
 	//SendMessage(m_dlgwnd, WM_TSHOWLOG, 0,0);
-	
+
 	if(m_para.bSaveLog)
 	{
 		FILE *fp=fopen(m_fnLog,"a");
@@ -80,7 +80,7 @@ void CDFAlign::TextOutput(const char *str)
 void* CDFAlign::ImageOutputThread(void *p)
 {
 	CDFAlign *pThis=(CDFAlign *)p;
-	
+
 	DIM dispdim=pThis->m_dispdim;
 
 	ifft2d(pThis->m_bufIm,dispdim);
@@ -96,16 +96,16 @@ void* CDFAlign::ImageOutputThread(void *p)
 	mrc.open(pThis->m_dispCorrSum,"wb");
 	mrc.createMRC(pThis->m_dispIm,dispdim.width(),dispdim.height(),1);
 	mrc.close();
-	
+
 	delete [] buf;
-	
+
 	return (void *)0;
 }
 void CDFAlign::ImageOutput(float *buf)
 {
 	DIM dispdim=m_dispdim;
 	memcpy(m_bufIm,buf,sizeof(float)*(dispdim.width()+2)*dispdim.height());
-	
+
 	pthread_t tid;
 	int terror;
 	terror=pthread_create(&tid,NULL,ImageOutputThread,(void *)this);
@@ -134,7 +134,7 @@ void* CDFAlign::FFTOutputCorrThread(void *p)
 	mrc.open(pThis->m_dispCorrFFT,"wb");
 	mrc.createMRC(pThis->m_dispFFTCorr,DISPDIM,DISPDIM,1);
 	mrc.close();
-	
+
 	return (void *)0;
 }
 void CDFAlign::FFTOutputCorr(float *buf)
@@ -144,7 +144,7 @@ void CDFAlign::FFTOutputCorr(float *buf)
 	//memcpy(m_bufFFTCorr,buf,sizeof(float)*(nsam.width()/2+1)*nsam.height());
 	if(m_bufFFTCorr==0) m_bufFFTCorr=new float[(DISPDIM+2)*DISPDIM];
 	memcpy(m_bufFFTCorr,buf,sizeof(float)*(DISPDIM+2)*DISPDIM);
-	
+
 	pthread_t tid;
 	int terror;
 	terror=pthread_create(&tid,NULL,FFTOutputCorrThread,(void *)this);
@@ -165,7 +165,7 @@ void* CDFAlign::FFTOutputRawThread(void *p)
 	//BinFFTDispBufToChar(pThis->m_dispFFTRaw, DISPDIM, buf, nsam);
 	//delete [] buf;
 	DispFFTToDispShort(pThis->m_dispFFTRaw,pThis->m_bufFFTRaw,DISPDIM);
-	
+
 	//add output code here
 	//SendMessage(pThis->m_dlgwnd, WM_TSHOWFFTRAW, 0,0);
 	MRC mrc;
@@ -173,8 +173,8 @@ void* CDFAlign::FFTOutputRawThread(void *p)
 	mrc.createMRC(pThis->m_dispFFTRaw,DISPDIM,DISPDIM,1);
 	mrc.close();
 
-	
-	
+
+
 	return (void *)0;
 }
 void CDFAlign::FFTOutputRaw(float *buf)
@@ -184,7 +184,7 @@ void CDFAlign::FFTOutputRaw(float *buf)
 	//memcpy(m_bufFFTRaw,buf,sizeof(float)*(nsam.width()/2+1)*nsam.height());
 	if(m_bufFFTRaw==0) m_bufFFTRaw=new float[(DISPDIM+2)*DISPDIM];
 	memcpy(m_bufFFTRaw,buf,sizeof(float)*(DISPDIM+2)*DISPDIM);
-	
+
 	pthread_t tid;
 	int terror;
 	terror=pthread_create(&tid,NULL,FFTOutputRawThread,(void *)this);
@@ -199,10 +199,10 @@ void CDFAlign::FFTOutputRaw(float *buf)
 void* CDFAlign::CCMapOutputThread(void *p)
 {
 	CDFAlign *pThis=(CDFAlign *)p;
-	
+
 	//add output code here
 	//SendMessage(pThis->m_dlgwnd, WM_TSHOWCCMAP, 0,0);
-	
+
 	return (void *)0;
 }
 void CDFAlign::CCMapOutput(float *buf, void *pki)
@@ -230,15 +230,162 @@ void CDFAlign::CCMapOutput(float *buf, void *pki)
 void CDFAlign::PlotFSC(float2* hRaw0, float2 *hRaw1, float2 *hCorr0, float2 *hCorr1,
 					MASK *pPosList, DIM nsam, complex<double> direction)
 {
-	
+	const int step=nsam.width()/200;
+	float ratio = float(nsam.x)/float(nsam.y);
+	float ratio2 = ratio*ratio;
+
+	int nsamc=nsam.width()/2+1;
+	int sizec=nsamc*nsam.height();
+	int nbox=nsamc/step+1;
+
+	int i,id;
+	float r,angle;
+	float edge=cos(PI/4);
+
+	float3 *fRaw=new float3[nbox];   // x:cos(phase) y:amp^2 z:amp^2, overall
+	float3 *fRaw0=new float3[nbox];   // x:cos(phase) y:amp^2 z:amp^2, along drift
+	float3 *fRaw1=new float3[nbox];   // x:cos(phase) y:amp^2 z:amp^2, perpendicular to drift
+	float3 *fCorr=new float3[nbox];   // x:cos(phase) y:amp^2 z:amp^2, overall
+	float3 *fCorr0=new float3[nbox];   // x:cos(phase) y:amp^2 z:amp^2, along drift
+	float3 *fCorr1=new float3[nbox];   // x:cos(phase) y:amp^2 z:amp^2, perpendicular to drift
+	memset(fRaw,0,sizeof(float3)*nbox);
+	memset(fRaw0,0,sizeof(float3)*nbox);
+	memset(fRaw1,0,sizeof(float3)*nbox);
+	memset(fCorr,0,sizeof(float3)*nbox);
+	memset(fCorr0,0,sizeof(float3)*nbox);
+	memset(fCorr1,0,sizeof(float3)*nbox);
+
+	if(abs(direction)>0.1) direction/=abs(direction);
+	else direction=1.0;
+
+	cuComplex a,b;
+
+
+	for(i=0;i<sizec;i++)
+	{
+		r=sqrt(float(pPosList[i].x*pPosList[i].x+pPosList[i].y*pPosList[i].y*ratio2));
+		if(int(r)<=0 || r>=nsamc) continue;
+		id=int(r/step);
+
+		angle=fabs(pPosList[i].x*direction.real()+pPosList[i].y*ratio*direction.imag())/r;
+
+		if(angle>edge) //along drift
+		{
+			a=hRaw0[i];
+			b=hRaw1[i];
+			fRaw0[id].x+=a.x*b.x+a.y*b.y;
+			fRaw0[id].y+=a.x*a.x+a.y*a.y;
+			fRaw0[id].z+=b.x*b.x+b.y*b.y;
+
+			a=hCorr0[i];
+			b=hCorr1[i];
+			fCorr0[id].x+=a.x*b.x+a.y*b.y;
+			fCorr0[id].y+=a.x*a.x+a.y*a.y;
+			fCorr0[id].z+=b.x*b.x+b.y*b.y;
+}
+		else  //perpendicular drift
+		{
+			a=hRaw0[i];
+			b=hRaw1[i];
+			fRaw1[id].x+=a.x*b.x+a.y*b.y;
+			fRaw1[id].y+=a.x*a.x+a.y*a.y;
+			fRaw1[id].z+=b.x*b.x+b.y*b.y;
+
+			a=hCorr0[i];
+			b=hCorr1[i];
+			fCorr1[id].x+=a.x*b.x+a.y*b.y;
+			fCorr1[id].y+=a.x*a.x+a.y*a.y;
+			fCorr1[id].z+=b.x*b.x+b.y*b.y;
+		}
+
+		//Overall
+		a=hRaw0[i];
+		b=hRaw1[i];
+		fRaw[id].x+=a.x*b.x+a.y*b.y;
+		fRaw[id].y+=a.x*a.x+a.y*a.y;
+		fRaw[id].z+=b.x*b.x+b.y*b.y;
+		a=hCorr0[i];
+		b=hCorr1[i];
+		fCorr[id].x+=a.x*b.x+a.y*b.y;
+		fCorr[id].y+=a.x*a.x+a.y*a.y;
+		fCorr[id].z+=b.x*b.x+b.y*b.y;
+	}
+
+	m_fscRaw.resize(nbox,0.0);
+	m_fscRaw0.resize(nbox,0.0);
+	m_fscRaw1.resize(nbox,0.0);
+	m_fscCorr.resize(nbox,0.0);
+	m_fscCorr0.resize(nbox,0.0);
+	m_fscCorr1.resize(nbox,0.0);
+
+
+	float t;
+	for(i=0;i<nbox;i++)
+	{
+		//Raw overall
+		t=fRaw[i].y*fRaw[i].z;
+		if(t>0.00001) m_fscRaw[i]=complex<double>(double(i)/nbox,fRaw[i].x/sqrt(t));
+		else m_fscRaw[i]=complex<double>(double(i)/nbox,0.0);
+
+		//Raw along drift
+		t=fRaw0[i].y*fRaw0[i].z;
+		if(t>0.00001) m_fscRaw0[i]=complex<double>(double(i)/nbox,fRaw0[i].x/sqrt(t));
+		else m_fscRaw0[i]=complex<double>(double(i)/nbox,0.0);
+
+		//Raw perpendicualr to drift
+		t=fRaw1[i].y*fRaw1[i].z;
+		if(t>0.00001) m_fscRaw1[i]=complex<double>(double(i)/nbox,fRaw1[i].x/sqrt(t));
+		else m_fscRaw1[i]=complex<double>(double(i)/nbox,0.0);
+
+		//Corrected overall
+		t=fCorr[i].y*fCorr[i].z;
+		if(t>0.00001) m_fscCorr[i]=complex<double>(double(i)/nbox,fCorr[i].x/sqrt(t));
+		else m_fscCorr[i]=complex<double>(double(i)/nbox,0.0);
+
+		//Corrected along drift
+		t=fCorr0[i].y*fCorr0[i].z;
+		if(t>0.00001) m_fscCorr0[i]=complex<double>(double(i)/nbox,fCorr0[i].x/sqrt(t));
+		else m_fscCorr0[i]=complex<double>(double(i)/nbox,0.0);
+
+		//Corrected perpendicualr to drift
+		t=fCorr1[i].y*fCorr1[i].z;
+		if(t>0.00001) m_fscCorr1[i]=complex<double>(double(i)/nbox,fCorr1[i].x/sqrt(t));
+		else m_fscCorr1[i]=complex<double>(double(i)/nbox,0.0);
+	}
+
+	//add output code here
+	//SendMessage(m_dlgwnd, WM_TSHOWFSC, 0,0);
+
+	//output
+
+	char str[512];
+	sprintf(str,"\nFSC: Overall(O), parallel(D) and perpendicular(U) to drift direction(%.1f Deg):\n",
+				atan2(direction.imag(),-direction.real())*180.0/PI);
+	TextOutput(str);
+	TextOutput("   Nq%     O_Raw     D_Raw     U_Raw     O_Corr    D_Corr    U_Corr\n");
+	for(i=0;i<nbox;i++)
+	{
+		sprintf(str,"%7.2f %9.4f %9.4f %9.4f %9.4f %9.4f %9.4f\n",i*100.0/nbox,
+			m_fscRaw[i].imag(),m_fscRaw0[i].imag(),m_fscRaw1[i].imag(),
+			m_fscCorr[i].imag(),m_fscCorr0[i].imag(),m_fscCorr1[i].imag());
+		TextOutput(str);
+	}
+	TextOutput("\n");
+
+	delete [] fRaw;
+	delete [] fRaw0;
+	delete [] fRaw1;
+	delete [] fCorr;
+	delete [] fCorr0;
+	delete [] fCorr1;
 }
 
 void CDFAlign::Done()
 {
-	   
+
 	//add output code here
 	//SendMessage(m_dlgwnd, WM_TDONE, 0,0);
-	
+
 }
 
 void CDFAlign::PlotOutput(vector<complex<double> > &xy)
@@ -281,9 +428,9 @@ void CDFAlign::RunAlign()
 {
 	// TODO: Add your control notification handler code here
 	//UpdateData(true);
-	
+
 	m_tids.clear();
-	
+
 	pthread_t tid;
 	int terror;
 	terror=pthread_create(&tid,NULL,ThreadFunc_cuAlign,(void *)this);
@@ -293,7 +440,7 @@ void CDFAlign::RunAlign()
 		return;
    }
    m_tids.push_back(tid);
-   
+
    //wait for finish
    void *TReturn;
    int i;
@@ -302,9 +449,9 @@ void CDFAlign::RunAlign()
    	terror=pthread_join(m_tids[i],&TReturn);
    	if(terror!=0)
    	{
-      	TextOutput("Warnning: Thread doesn't exit. Something may be wrong.\n");
+      	TextOutput("Warning: Thread doesn't exit. Something may be wrong.\n");
    	}
-   	
+
    }
    m_tids.clear();
 }
@@ -337,7 +484,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 	sprintf(str,"\nInput Stack: Nx(%d) Ny(%d) Nz(%d)\n\n",nx,ny,nz);
 	pThis->TextOutput(str);
 
-	
+
 	int bin=para.bin;
 	if(bin<=0) return (void *)0;
 
@@ -352,7 +499,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 	}
 
 	DIM nsam=nsamUnbin/bin;
-	
+
 	int nsamb=nsam.width()+2;
 	if(bin==1) sprintf(str,"Crop Image: Offset(%d %d) Dim(%d %d)\n\n",
 							offsetx,offsety,nsamUnbin.x,nsamUnbin.y);
@@ -362,7 +509,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 	pThis->m_nsam=nsam;
 	//pThis->m_nsamRaw=nx/bin;
 
-	//allocate memeory	
+	//allocate memeory
 	size_t size=nsam.width()*nsam.height();
 	size_t sizeb=nsamb*nsam.height();
 	int sizebUnbin=(nsamUnbin.width()+2)*nsamUnbin.height();
@@ -383,33 +530,65 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 	float *hFSCRaw1=new float[sizeb];  //odd
 	float *hFSCCorr0=new float[sizeb];  //even number
 	float *hFSCCorr1=new float[sizeb];   //odd
+
 	size_t refsize=0;
-	if(para.bDark) 
+	//if both -hgr and -fgr are enabled, -fgr will be disabled.
+	if(para.bHGain && stack.getMode()==5)
 	{
-		if(pThis->m_pDark!=0) delete [] pThis->m_pDark;
-		pThis->m_pDark=ReadRef(pThis->m_fnDark,nx,ny);
-		if(pThis->m_pDark==0) 
+		if(pThis->m_pGain!=0) delete [] pThis->m_pGain;
+		pThis->m_pGain=new float[nx*ny];
+		if( stack.readGainInHeader(pThis->m_pGain) == (nx*ny*sizeof(float)) )
 		{
-			Message("Failed to get dark reference.");	
-			pThis->m_bRun=false;
-			return (void *)0;
+			refsize+=nx*ny;
+			para.bGain=true;
+			sprintf(str,"\nGain reference was read from MRC header(Mode=5)\n\n");
+			pThis->TextOutput(str);
 		}
-		refsize+=nx*ny;
+		else
+		{
+			Message("\nFailed to read gain reference from MRC header(Mode=5).");
+			delete [] pThis->m_pGain;
+			pThis->m_pGain=0;
+
+		}
 	}
-	if(para.bGain) 
+	else if(para.bGain)
 	{
 		if(pThis->m_pGain!=0) delete [] pThis->m_pGain;
 		pThis->m_pGain=ReadRef(pThis->m_fnGain,nx,ny);
-		if(pThis->m_pGain==0) 
+		if(pThis->m_pGain==0)
 		{
-			Message("Failed to get gain reference.");	
-			pThis->m_bRun=false;
-			return (void *)0;
+			sprintf(str,"\nFailed to read gain reference from %s .\n\n",pThis->m_fnGain);
+			para.bGain=false;
 		}
+		else
+		{
+			sprintf(str,"\nGain reference was read from %s .\n\n",pThis->m_fnGain);
+			pThis->TextOutput(str);
 		refsize+=nx*ny;
+		}
 	}
-	
-	
+
+	if(para.bDark)
+	{
+		if(pThis->m_pDark!=0) delete [] pThis->m_pDark;
+		pThis->m_pDark=ReadRef(pThis->m_fnDark,nx,ny);
+		if(pThis->m_pDark==0)
+		{
+			sprintf(str,"\nFailed to read dark reference from %s .\n\n",pThis->m_fnDark);
+			para.bDark=false;
+		}
+		else
+		{
+			sprintf(str,"\nDark reference was read from %s .\n\n",pThis->m_fnDark);
+			pThis->TextOutput(str);
+			refsize+=nx*ny;
+		}
+	}
+
+
+
+
 	sprintf(str,"Allocate host memory: %f Gb\n",(nx*ny+sizeb*(nframe+8)+sizebUnbin+refsize)/256.0/1024.0/1024.0);
 	pThis->TextOutput(str);
 	if(hbuf==0)
@@ -432,24 +611,24 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 		pThis->m_bRun=false;
 		return (void *)0;
 	}
-	
+
 
 	float *dsum=0;
 	float *dsumcorr=0;
 	float *dfft=0;
 	float *dtmp=0;
-	GPUMemAlloc((void **)&dsum,sizeof(float)*sizeb);	
-	GPUMemAlloc((void **)&dsumcorr,sizeof(float)*sizeb);	
+	GPUMemAlloc((void **)&dsum,sizeof(float)*sizeb);
+	GPUMemAlloc((void **)&dsumcorr,sizeof(float)*sizeb);
 	GPUMemAlloc((void **)&dtmp,sizeof(float)*sizeb);
 	cufftHandle fft_plan,ifft_plan;
-	
+
 	//prepare fft for unbinned image
 	fft_plan=GPUFFTPlan(nsamUnbin);
 	GPUSync();
 	GPUMemAlloc((void **)&dfft,sizeof(float)*sizebUnbin);
 
 
-	//make a list 
+	//make a list
 	int sizec=(nsam.width()/2+1)*nsam.height();
 	MASK *hPosList=new MASK[sizec];
 	MASK *dPosList=0;
@@ -464,17 +643,17 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 
 	//Read stack
 	pThis->TextOutput("\nRead stack:\n");
-	
+
 	float sx=0;
 	float sy=0;
 	float shiftx,shifty,cc;
 	float avgcc=0.0;
 	bool bFSCEven=true;
-	
+
 	//prepare frame sum numbers
-	//Only the frame inside sum range is used for stack and sum output 
+	//Only the frame inside sum range is used for stack and sum output
 	int nStartSum=para.nStartSum-para.nStart;
-	int nEndSum=para.nEndSum-para.nStart;	
+	int nEndSum=para.nEndSum-para.nStart;
 	if(nStartSum<0) nStartSum=0;
 	if(para.nEndSum>para.nEnd) nEndSum=para.nEnd-para.nStart+1;
 	if(nEndSum<=nStartSum || nEndSum>=nframe) nEndSum=nframe-1;
@@ -503,10 +682,10 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 			sprintf(str,"Error when applying dark and/or gain to #%03d\n",j);
 			pThis->TextOutput(str);
 		}
-		
-		
+
+
 		crop2fft(bufmrc,DIM(nx,ny),bufmrcfft,offsetx,offsety,nsamUnbin,bin);
-		
+
 		//copy to GPU
 		GPUMemH2D((void *)dfft,(void *)bufmrcfft,sizeof(float)*sizebUnbin);
 		//do fft
@@ -530,29 +709,30 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 		//copy ffted image to host
 		GPUMemD2H((void *)(hbuf+(j-para.nStart)*sizeb),(void *)dfft,sizeof(float)*sizeb);
 		GPUSync();
-		
+
 		sprintf(str,"......Read and sum frame #%03d   mean:%f\n",j,(hbuf+(j-para.nStart)*sizeb)[0]/nsam.x/nsam.y);
 		pThis->TextOutput(str);
-		
+
 	}
 	GPUMemD2H((void *)hFSCRaw0,(void *)dsum,sizeof(float)*sizeb);
 	GPUMemD2H((void *)hFSCRaw1,(void *)dsumcorr,sizeof(float)*sizeb);
 	GPUAdd(dsum,dsumcorr,sizeb);
 	GPUSync();
-	
+
 
 	//free memory for unbined image
 	delete [] bufmrcfft;
 	bufmrcfft=0;
 	GPUMemFree((void **)&dfft);
 	GPUFFTDestroy(fft_plan);
-	fft_plan=0;	
+	fft_plan=0;
 	//finish GPU memory allocate
 	GPUMemAlloc((void **)&dfft,sizeof(float)*sizeb);
 	GPUMemZero((void **)&dsumcorr,sizeof(float)*sizeb);
 	GPUSync();
 	ifft_plan=GPUIFFTPlan(nsam);
 	GPUSync();
+
 	//copy sum image to host for save and display
 	if(para.bDispFFTRaw || para.bSaveRawSum)
 	{
@@ -578,8 +758,8 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 		sprintf(str,"Save Uncorrected Sum to: %s\n",pThis->m_fnRawsum);
 		pThis->TextOutput(str);
 	}
-	
-	
+
+
 	//save un-corrected stack
 	MRC stackRaw;
 	if(para.bSaveStackRaw)
@@ -603,7 +783,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 			GPUMemD2H((void *)htmp,(void *)dfft,sizeof(float)*sizeb);
 			fft2buf(bufmrc,htmp,nsam);
 			stackRaw.write2DIm(bufmrc,j-nStartSum);
-			
+
 			sprintf(str,"......Write frame #%03d\n",j+para.nStart);
 			pThis->TextOutput(str);
 		}
@@ -738,13 +918,13 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 	pThis->PlotOutput(shiftlist);
 
 	//save CCMap image
-	if(para.bSaveCCmap) 
+	if(para.bSaveCCmap)
 	{
 		buf2mrc(pThis->m_fnCCmap,hboxmap,box,box,ncomp);
 		sprintf(str,"Save CC map to: %s\n",pThis->m_fnCCmap);
 		pThis->TextOutput(str);
 	}
-		
+
 
 	MRC stackCorr;
 	if(para.bSaveStackCorr)
@@ -758,7 +938,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 
 	//3. correct xy-shift
 
-	
+
 	//reset memory
 	GPUMemZero((void **)&dsum,sizeof(float)*sizeb);
 	GPUSync();
@@ -769,7 +949,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 	int RefFrame=0;
 	if(para.bAlignToMid==1) RefFrame=nz/2+1;
 	if(para.bAlignToMid<=0) RefFrame=abs(para.bAlignToMid);
-	if(para.bAlignToMid!=0) 
+	if(para.bAlignToMid!=0)
 	{
 		if(RefFrame<para.nStart) RefFrame=para.nStart;
 		if(RefFrame>para.nEnd) RefFrame=para.nEnd;
@@ -808,7 +988,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 	for(j=nStartSum+1;j<=nEndSum;j++)
 	{
 		totalshift+=shift[j-1];
-		
+
 		//copy to GPU
 		GPUMemH2D((void *)dfft,(void *)(hbuf+j*sizeb),sizeof(float)*sizeb);
 		//shift
@@ -834,7 +1014,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 			stackCorr.write2DIm(bufmrc,j-nStartSum);
 		}
 	}
-	if(para.bSaveStackCorr) 
+	if(para.bSaveStackCorr)
 	{
 		MinMaxMean(bufmrc,nsam.x*nsam.y,stackCorr.m_header.dmin, stackCorr.m_header.dmax, stackCorr.m_header.dmean);
 	}
@@ -850,7 +1030,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 		DIM dispdim(DISPDIM,DISPDIM);
 		if(nsam.x<nsam.y) dispdim.x=int(DISPDIM*float(nsam.x)/float(nsam.y)+0.5)/2*2;
 		if(nsam.x>nsam.y) dispdim.y=int(DISPDIM*float(nsam.y)/float(nsam.x)+0.5)/2*2;
-		
+
 		pThis->m_dispdim=dispdim;
 		GPUMemBinD2H(hdisp, dsumcorr, dispdim, nsam);
 		pThis->ImageOutput(hdisp);
@@ -862,7 +1042,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 	GPUMultiplyNum(tsum,1.0/size,sizeb);
 	GPUMemD2H((void *)hsumCorr,(void *)tsum,sizeof(float)*sizeb);
 	fft2buf(bufmrc,hsumCorr,nsam);
-	
+
 	//save
 	MRC mrc;
 	mrc.open(pThis->m_fnAlignsum,"wb");
@@ -873,9 +1053,9 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 	mrc.close();
 	sprintf(str,"Save Corrected Sum to: %s\n",pThis->m_fnAlignsum);
 	pThis->TextOutput(str);
-	
+
 	//close save Corrected stack
-	if(para.bSaveStackCorr) 
+	if(para.bSaveStackCorr)
 	{
 		stackCorr.updateHeader();
 		pThis->TextOutput("\nWrite corrected stack:\n");
@@ -894,11 +1074,11 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 		{
 			avgshift+=shift[i]/abs(shift[i]);
 		}
-		pThis->PlotFSC((cuComplex *)hFSCRaw0, (cuComplex *)hFSCRaw1, (cuComplex *)hFSCCorr0, 
+		pThis->PlotFSC((cuComplex *)hFSCRaw0, (cuComplex *)hFSCRaw1, (cuComplex *)hFSCCorr0,
 					(cuComplex *)hFSCCorr1,hPosList,nsam,avgshift);
 	}
-	
-	
+
+
 	//free GPU FFT plan, new plan will be created for rectangular image
 	//GPUFFTDestroy(fft_plan);
 	GPUFFTDestroy(ifft_plan);
@@ -922,7 +1102,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 		GPUBinFFT(dfft, DISPDIM, dtmp, nsamsub, fft_plan);
 		GPUMemD2H((void *)hdisp,(void *)dfft,sizeof(float)*(DISPDIM+2)*DISPDIM);
 		//display
-		pThis->FFTOutputRaw(hdisp); 
+		pThis->FFTOutputRaw(hdisp);
 	}
 	//Make Corrected fft modulus for display
 	if(para.bDispFFTCorr)
@@ -938,15 +1118,15 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 		GPUBinFFT(dfft, DISPDIM, dtmp, nsamsub, fft_plan);
 		GPUMemD2H((void *)hdisp,(void *)dfft,sizeof(float)*(DISPDIM+2)*DISPDIM);
 		//display
-		pThis->FFTOutputCorr(hdisp);   
-	}	
+		pThis->FFTOutputCorr(hdisp);
+	}
 	//destory fft
 	if(para.bDispFFTRaw || para.bDispFFTCorr) GPUFFTDestroy(fft_plan);
 	/////////////////////////////////////////
 
-	
-	
-	
+
+
+
 
 	delete [] bufmrc;
 	delete [] hbuf;
@@ -970,7 +1150,7 @@ void* CDFAlign::ThreadFunc_cuAlign(void* p)
 
 	ResetGPU();
 	pThis->Done();
-	
+
 	sprintf(str,"Done.\n");
 	pThis->TextOutput(str);
 

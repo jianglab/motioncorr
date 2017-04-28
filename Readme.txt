@@ -62,13 +62,21 @@ Update:
 08.26.2013  Fix bugs and add new functions:
 				1) support rectangular image, replace -crd with -cdx and -cdy
 				2) fix bug of "align to middle", and now can align to any specified frame
-				3) output un-corrected stack
-				4) remove -sub option
-				5) adjust output function to make the program more stable
-				6) the min,max,mean value of output MRC stacks are set to the values of last frame
+            3) calculate overall FSC
+            4) measure drift direction by equal drift angle weighting for FSC
+            5) output un-corrected stack
+            6) remove -sub option
+            7) adjust output function to make the program more stable
+            8) the min,max,mean value of output MRC stacks are set to the values of last frame
 
 08.31.2013  Add new functions:
             1) Gain and dark normalization
             2) Add non-standard MRC format: mode 5(unsigned 8-bit integer) and mode 6(unsigned 16-bit integer)
+
+11.22.2013  Some important changes:
+            1) Define and support new MRC mode 5 to reduce size of K2 super-resolution stack.
+            2) Improve input parameter list in the beginning of log file.
+            3) Update dosef_logviewer to accept signal from UCSFImage4 for online pocessing and display.
+
 
 ***************************************
