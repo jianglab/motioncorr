@@ -91,7 +91,7 @@ void MRC::printInfo()
 		return;
 	}
 
-	printf("\tMRC Header size:                   %12d\n",sizeof(MRCHeader));
+	printf("\tMRC Header size:                   %12lu\n",sizeof(MRCHeader));
 	printf("\tNum of columns, rows,sections:     %12d %12d %12d\n",m_header.nx,m_header.ny,m_header.nz);
 	printf("\tMode:                              %12d\n",m_header.mode);
 	printf("\tNum of First column, row, section: %12d %12d %12d\n",m_header.nxstart, m_header.nystart, m_header.nzstart);
@@ -237,7 +237,6 @@ int MRC::readGainInHeader(float* buf)
 	size_t SymDataSize=getSymdatasize();
 	size_t GainSize=m_header.nx*m_header.ny*sizeof(float);
 	size_t offset=SymDataSize-GainSize; //the SymDatam may contain other data in the beginning
-	if(offset<0) return 0;
 
 	if(fseek(m_fp, 1024+offset, SEEK_SET)!=0) return 0;
 	return fread(buf, 1, GainSize, m_fp);
